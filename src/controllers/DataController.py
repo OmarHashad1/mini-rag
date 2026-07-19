@@ -1,6 +1,9 @@
 from controllers.BaseController import BaseController
+from controllers.ProjectController import ProjectController
 from fastapi import UploadFile
 from enums import ResponseEnums
+import re
+import os
 
 
 class DataController(BaseController):
@@ -20,5 +23,37 @@ class DataController(BaseController):
         return True, ResponseEnums.FILE_UPLOADED_SUCCESSFULLY.value
 
     def generate_unique_file_name(self, orig_name: str, project_id: str):
-        random_file_name = self.generate_random_string()
-        return random_file_name
+        try:
+            random_prefix = self.generate_random_string()
+            clean_file_name = self.get_clean_file_name(orign_file_name=orig_name)
+
+            unique_file_name = random_prefix + "_" + clean_file_name
+            return unique_file_name
+        except Exception:
+            raise
+
+    def get_file_path(self, orig_name: str, project_id: str):
+        try:
+            unique_file_name = self.generate_unique_file_name(
+                orig_name=orig_name, project_id=project_id
+            )
+            project_path = ProjectController().get_project_path(project_id=project_id)
+            new_file_path = os.path.join(project_path, unique_file_name)
+            while os.path.exists(new_file_path):
+                unique_file_name = self.generate_unique_file_name(
+                    orig_name=orig_name, project_id=project_id
+                )
+                new_file_path = os.path.join(project_path, unique_file_name)
+
+            return new_file_path
+        except Exception:
+            raise
+
+    def get_clean_file_name(self, orign_file_name: str):
+        cleaned_file_name = re.sub(r"[^\w.]", "", orign_file_name.strip())
+        cleaned_file_name = cleaned_file_name.replace(" ", "_")
+        return cleaned_file_name
+
+
+def get_data_controller():
+    return DataController()

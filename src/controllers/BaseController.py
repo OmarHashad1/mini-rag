@@ -15,4 +15,4 @@ class BaseController:
         )  # concat the base_dir (src) with the assets directory
 
     def generate_random_string(self, length: int = 12):
-        return "".join(random.choice(string.ascii_lowercase + string.digits, k=length))
+        return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))

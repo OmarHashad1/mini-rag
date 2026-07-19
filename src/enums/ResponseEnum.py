@@ -7,3 +7,4 @@ class ResponseEnums(Enum):
     )
     FILE_SIZE_EXCEEDED = "File must not exceed 10 MB of size"
     FILE_UPLOADED_SUCCESSFULLY = "File uploaded Successfully"
+    FILE_UPLOAD_FAILED = "Failed to upload the file"
