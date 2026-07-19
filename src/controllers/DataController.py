@@ -1,7 +1,7 @@
 from controllers.BaseController import BaseController
 from controllers.ProjectController import ProjectController
 from fastapi import UploadFile
-from enums import ResponseEnums
+from enums import ResponseEnum, ResponseSignalEnum
 import re
 import os
 
@@ -14,13 +14,22 @@ class DataController(BaseController):
         if file.content_type not in self.app_settings.ALLOWED_MIM_TYPES:
             return (
                 False,
-                ResponseEnums.FILE_TYPE_NOT_SUPPORTED.value,
+                ResponseEnum.FILE_TYPE_NOT_SUPPORTED.value,
+                ResponseSignalEnum.FILE_TYPE_NOT_SUPPORTED.value,
             )
 
         if file.size > (self.app_settings.FILE_MAX_SIZE * 1024 * 1024):
-            return False, ResponseEnums.FILE_SIZE_EXCEEDED.value
+            return (
+                False,
+                ResponseEnum.FILE_SIZE_EXCEEDED.value,
+                ResponseSignalEnum.FILE_SIZE_EXCEEDED.value,
+            )
 
-        return True, ResponseEnums.FILE_UPLOADED_SUCCESSFULLY.value
+        return (
+            True,
+            ResponseEnum.FILE_UPLOADED_SUCCESSFULLY.value,
+            ResponseSignalEnum.FILE_UPLOADED_SUCCESSFULLY.value,
+        )
 
     def generate_unique_file_name(self, orig_name: str, project_id: str):
         try:
@@ -45,7 +54,7 @@ class DataController(BaseController):
                 )
                 new_file_path = os.path.join(project_path, unique_file_name)
 
-            return new_file_path
+            return new_file_path, unique_file_name
         except Exception:
             raise
 
