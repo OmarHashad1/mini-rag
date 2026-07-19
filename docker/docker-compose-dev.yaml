@@ -1,0 +1,24 @@
+
+services:
+  mini-rag-dev:
+    container_name: mini-rag-dev
+    build:
+      dockerfile: Dockerfile
+      context: ..
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /mini-rag
+          ignore: 
+            - .venv/
+            - __pycache__/
+            - .git/
+            - src/assets/files/
+        - action: rebuild
+          path: pyproject.toml
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    env_file:
+      - "../.env"
