@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     ALLOWED_MIM_TYPES: list
     FILE_MAX_SIZE: int
     FILE_DEFAULT_CHUCK_SIZE: int
+    MONGO_URI:str
+    DB_NAME:str
 
     class Config:
         env_file = "../.env"

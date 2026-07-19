@@ -1,3 +1,3 @@
-from .PydanticConfig import Settings, get_settings
+from .pydantic_config import Settings, get_settings
 
 __all__ = ["Settings", "get_settings"]

@@ -1,3 +1,3 @@
-from .ProcessSchema import ProcessRequest
+from .process_schema import ProcessRequest
 
 __all__ = ["ProcessRequest"]

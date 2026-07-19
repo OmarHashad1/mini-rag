@@ -1,4 +1,4 @@
-from .ResponseEnum import ResponseEnum, ResponseSignalEnum
-from .ProcessingEnum import ProcessingEnum
+from .response_enum import ResponseEnum, ResponseSignalEnum
+from .processing_enum import ProcessingEnum
 
 __all__ = ["ResponseEnum", "ProcessingEnum", "ResponseSignalEnum"]
