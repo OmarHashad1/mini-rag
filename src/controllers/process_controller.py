@@ -17,16 +17,23 @@ class ProcessController(BaseController):
         return os.path.splitext(file_id)[-1]
 
     def get_file_load(self, file_id: str):
-        file_path = os.path.join(self.project_path, file_id)
-        file_ext = self.get_file_extention(file_id=file_id)
+        try:
+            file_path = os.path.join(self.project_path, file_id)
+            print("file exists:", os.path.exists(file_path))
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"file with id {file_id} not found")
 
-        if file_ext == ProcessingEnum.TXT.value:
-            return TextLoader(file_path=file_path, encoding="utf-8")
+            file_ext = self.get_file_extention(file_id=file_id)
 
-        if file_ext == ProcessingEnum.PDF.value:
-            return PyMuPDF4LLMLoader(file_path=file_path)
+            if file_ext == ProcessingEnum.TXT.value:
+                return TextLoader(file_path=file_path, encoding="utf-8")
 
-        return None
+            if file_ext == ProcessingEnum.PDF.value:
+                return PyMuPDF4LLMLoader(file_path=file_path)
+
+            return None
+        except Exception:
+            raise
 
     def get_file_content(self, file_id: str):
         loader = self.get_file_load(file_id=file_id)

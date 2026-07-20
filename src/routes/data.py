@@ -3,12 +3,19 @@ from fastapi.responses import JSONResponse
 from configs import get_settings, Settings
 from controllers import get_data_controller, DataController, ProcessController
 from enums import ResponseEnum, ResponseSignalEnum
+from repositories import ProjectRepo, ChunkRepo
 from schemas import ProcessRequest
+from models import Chunk
 import aiofiles
 import logging
 
+
 data_router = APIRouter(prefix="/api/v1/data", tags=["api_v1", "data"])
 logger = logging.getLogger("uvicorn.error")
+
+
+project_repo = ProjectRepo()
+chunk_repo = ChunkRepo()
 
 
 @data_router.post("/upload/{project_id}")
@@ -19,7 +26,9 @@ async def upload_file(
     data_controller: DataController = Depends(get_data_controller),
 ):
     try:
+        project = await project_repo.insert_or_find_doc(data={"project_id": project_id})
         is_valid, message, signal = data_controller.validate_uplaod_file(file)
+        print(project)
 
         if not is_valid:
             raise HTTPException(
@@ -62,6 +71,7 @@ async def process_file(project_id: str, dto: ProcessRequest):
         file_id = dto.file_id
         chunk_size = dto.chunk_size
         chunk_overlap = dto.chunk_overlap
+        do_reset = dto.do_reset
         process_controller = ProcessController(project_id=project_id)
         file_content = process_controller.get_file_content(file_id=file_id)
         file_chunks = process_controller.process_file_content(
@@ -69,6 +79,18 @@ async def process_file(project_id: str, dto: ProcessRequest):
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )
+
+        project = await project_repo.find_one(data={"project_id": project_id})
+
+        if project is None:
+            raise HTTPException(
+                detail={
+                    "signal": ResponseSignalEnum.PROJECT_NOT_FOUND.value,
+                    "message": ResponseEnum.PROJECT_NOT_FOUND.value,
+                },
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
         if file_chunks is None or len(file_chunks) == 0:
             raise HTTPException(
                 detail={
@@ -77,13 +99,39 @@ async def process_file(project_id: str, dto: ProcessRequest):
                 },
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
+        print(project.id,do_reset)
+
+        chunks_list = [
+            dict(
+                Chunk(
+                    chunk_text=chunk.page_content,
+                    chunk_metadata=chunk.metadata,
+                    chunk_order=i + 1,
+                    chunk_project_id=project.id,
+                )
+            )
+            for i, chunk in enumerate(file_chunks)
+        ]
+        if do_reset == 1:
+            await chunk_repo.delete_many(query={"chunk_project_id": project.id})
+
+        docs_inserted = await chunk_repo.insert_bulk(data=chunks_list)
         return JSONResponse(
             content={
                 "signal": ResponseSignalEnum.FILE_PROCESSING_SUCCESS.value,
                 "message": ResponseEnum.FILE_PROCESSING_SUCCESS.value,
-                "chunks": file_chunks,
+                "chunks_count": docs_inserted,
             }
         )
+    except FileNotFoundError:
+        return JSONResponse(
+            content={
+                "signal": ResponseSignalEnum.FILE_NOT_FOUND.value,
+                "message": ResponseEnum.FILE_NOT_FOUND.value,
+            },
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
     except HTTPException:
         raise
     except Exception as e:

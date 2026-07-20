@@ -1,3 +1,3 @@
 from .chunk_model import Chunk
-
-__all__=["Chunk"]
+from .project_model import Project
+__all__=["Chunk","Project"]

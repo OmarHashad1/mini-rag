@@ -24,3 +24,5 @@ services:
       - "../.env"
     depends_on:
       - mongo
+    volumes:
+      - "../src/assets/files:/mini-rag/src/assets/files"

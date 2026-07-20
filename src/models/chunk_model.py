@@ -4,8 +4,8 @@ from bson.objectid import ObjectId
 
 
 class Chunk(Document):
-    text_chunk: str = Field(..., min_length=1)
-    metadata: dict
+    chunk_text: str = Field(..., min_length=1)
+    chunk_metadata: dict
     chunk_order: int = Field(..., gt=0)
     chunk_project_id: ObjectId
 
