@@ -1,5 +1,7 @@
 # Mini-RAG
 
+> **Under construction.** This project is a work in progress — APIs, structure, and features may change without notice.
+
 A minimal Retrieval-Augmented Generation (RAG) backend built with FastAPI. It ingests documents (PDF/TXT), splits them into chunks, and persists them per-project in MongoDB — the groundwork for a RAG pipeline (embedding/retrieval/generation are not wired up yet).
 
 ## Features
