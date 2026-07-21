@@ -10,3 +10,7 @@ class Project(Document):
 
     class Settings:
         name = "projects"
+
+    @classmethod
+    def get_indexes(cls):
+        pass
