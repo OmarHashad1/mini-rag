@@ -4,14 +4,14 @@ from configs import get_settings
 from contextlib import asynccontextmanager
 from pymongo import AsyncMongoClient
 from beanie import init_beanie
-from models import Chunk,Project
+from models import Chunk, Project, Asset
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Settings = get_settings()
     client = AsyncMongoClient(Settings.MONGO_URI)
-    await init_beanie(database=client[Settings.DB_NAME], document_models=[Chunk,Project])
+    await init_beanie(database=client[Settings.DB_NAME], document_models=[Chunk, Project, Asset])
     print("Connected to MongoDB")
     yield
     await client.close()

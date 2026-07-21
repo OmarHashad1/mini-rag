@@ -3,9 +3,11 @@ from fastapi.responses import JSONResponse
 from configs import get_settings, Settings
 from controllers import get_data_controller, DataController, ProcessController
 from enums import ResponseEnum, ResponseSignalEnum
-from repositories import ProjectRepo, ChunkRepo
+from repositories import ProjectRepo, ChunkRepo, AssetRepo
 from schemas import ProcessRequest
-from models import Chunk
+from models import Chunk, Asset
+from enums import AssetEnum
+import os
 import aiofiles
 import logging
 
@@ -16,6 +18,9 @@ logger = logging.getLogger("uvicorn.error")
 
 project_repo = ProjectRepo()
 chunk_repo = ChunkRepo()
+asset_repo = AssetRepo()
+
+ALLOWED_MIME_TYPES = {t.value for t in AssetEnum}
 
 
 @data_router.post("/upload/{project_id}")
@@ -26,9 +31,14 @@ async def upload_file(
     data_controller: DataController = Depends(get_data_controller),
 ):
     try:
-        project = await project_repo.insert_or_find_doc(data={"project_id": project_id})
+        if file.content_type not in ALLOWED_MIME_TYPES:
+            raise HTTPException(
+                status_code=400, detail=f"Unsupported file type: {file.content_type}"
+            )
+
         is_valid, message, signal = data_controller.validate_uplaod_file(file)
-        print(project)
+
+        project = await project_repo.insert_or_find_doc(data={"project_id": project_id})
 
         if not is_valid:
             raise HTTPException(
@@ -43,11 +53,25 @@ async def upload_file(
             while chunk := await file.read(app_settings.FILE_DEFAULT_CHUCK_SIZE):
                 await f.write(chunk)
 
+        asset = Asset(
+            project_id=project.id,
+            asset_type=file.content_type,
+            asset_name=file_id,
+            asset_size=os.path.getsize(file_path),
+        )
+
+        await asset_repo.insert_one(data=dict(asset))
+
         return JSONResponse(
             content={
                 "signal": ResponseSignalEnum.FILE_UPLOADED_SUCCESSFULLY.value,
                 "message": message,
-                "file_id": file_id,
+                "data": {
+                    "asset_name": asset.asset_name,
+                    "asset_type": asset.asset_type.value,
+                    "project_id": asset.project_id.__str__(),
+                    "asset_size": asset.asset_size,
+                },
             },
             status_code=200,
         )
@@ -55,6 +79,7 @@ async def upload_file(
         logging.error(f"Error while uplaoding file: {e}")
         raise
     except Exception as e:
+        print(e)
         logging.error(f"Error while uplaoding file: {e}")
         return JSONResponse(
             content={
@@ -99,7 +124,7 @@ async def process_file(project_id: str, dto: ProcessRequest):
                 },
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
-        print(project.id,do_reset)
+        print(project.id, do_reset)
 
         chunks_list = [
             dict(
