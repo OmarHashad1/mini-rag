@@ -27,8 +27,6 @@ class DataController(BaseController):
 
         return (
             True,
-            ResponseEnum.FILE_UPLOADED_SUCCESSFULLY.value,
-            ResponseSignalEnum.FILE_UPLOADED_SUCCESSFULLY.value,
         )
 
     def generate_unique_file_name(self, orig_name: str, project_id: str):

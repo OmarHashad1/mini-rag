@@ -35,21 +35,27 @@ class ProcessController(BaseController):
             raise
 
     def get_file_content(self, file_id: str):
-        loader = self.get_file_load(file_id=file_id)
-        return loader.load()
+        try:
+            loader = self.get_file_load(file_id=file_id)
+            return loader.load()
+        except Exception:
+            raise
 
     def process_file_content(
         self, file_content: list, chunk_size: int = 100, chunk_overlap: int = 20
     ):
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size, chunk_overlap=chunk_overlap, length_function=len
-        )
+        try:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size, chunk_overlap=chunk_overlap, length_function=len
+            )
 
-        file_context_texts = [rec.page_content for rec in file_content]
-        file_context_metadata = [rec.metadata for rec in file_content]
+            file_context_texts = [rec.page_content for rec in file_content]
+            file_context_metadata = [rec.metadata for rec in file_content]
 
-        chunks = text_splitter.create_documents(
-            file_context_texts, metadatas=file_context_metadata
-        )
+            chunks = text_splitter.create_documents(
+                file_context_texts, metadatas=file_context_metadata
+            )
 
-        return chunks
+            return chunks
+        except Exception:
+            raise
