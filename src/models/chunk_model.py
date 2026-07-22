@@ -12,6 +12,9 @@ class Chunk(Document):
     chunk_project_id: Annotated[
         PydanticObjectId, Indexed(unique=False, index_type=ASCENDING)
     ]
+    chunk_asset_id: Annotated[
+        PydanticObjectId, Indexed(unique=False, index_type=ASCENDING)
+    ]
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

@@ -19,7 +19,6 @@ class ProcessController(BaseController):
     def get_file_load(self, file_id: str):
         try:
             file_path = os.path.join(self.project_path, file_id)
-            print("file exists:", os.path.exists(file_path))
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"file with id {file_id} not found")
 

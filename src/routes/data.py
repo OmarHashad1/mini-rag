@@ -7,6 +7,7 @@ from repositories import ProjectRepo, ChunkRepo, AssetRepo
 from schemas import ProcessRequest
 from models import Chunk, Asset
 from enums import AssetEnum
+from models.project import AssetNameAndId, ID
 import os
 import aiofiles
 import logging
@@ -75,12 +76,11 @@ async def upload_file(
             },
             status_code=200,
         )
-    except HTTPException as e:
-        logging.error(f"Error while uplaoding file: {e}")
+    except HTTPException:
+        logging.exception("Error while uplaoding file")
         raise
-    except Exception as e:
-        print(e)
-        logging.error(f"Error while uplaoding file: {e}")
+    except Exception:
+        logging.exception("Error while uplaoding file")
         return JSONResponse(
             content={
                 "signal": ResponseSignalEnum.FILE_UPLOAD_FAILED.value,
@@ -98,14 +98,10 @@ async def process_file(project_id: str, dto: ProcessRequest):
         chunk_overlap = dto.chunk_overlap
         do_reset = dto.do_reset
         process_controller = ProcessController(project_id=project_id)
-        file_content = process_controller.get_file_content(file_id=file_id)
-        file_chunks = process_controller.process_file_content(
-            file_content=file_content,
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-        )
 
-        project = await project_repo.find_one(data={"project_id": project_id})
+        project = await project_repo.find_one(
+            query={"project_id": project_id}, projection=ID
+        )
 
         if project is None:
             raise HTTPException(
@@ -116,31 +112,62 @@ async def process_file(project_id: str, dto: ProcessRequest):
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
-        if file_chunks is None or len(file_chunks) == 0:
-            raise HTTPException(
-                detail={
-                    "signal": ResponseSignalEnum.FILE_PROCESSING_FAILED.value,
-                    "message": ResponseEnum.FILE_PROCESSING_FAILED.value,
-                },
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-        print(project.id, do_reset)
-
-        chunks_list = [
-            dict(
-                Chunk(
-                    chunk_text=chunk.page_content,
-                    chunk_metadata=chunk.metadata,
-                    chunk_order=i + 1,
-                    chunk_project_id=project.id,
-                )
-            )
-            for i, chunk in enumerate(file_chunks)
-        ]
         if do_reset == 1:
             await chunk_repo.delete_many(query={"chunk_project_id": project.id})
 
-        docs_inserted = await chunk_repo.insert_bulk(data=chunks_list)
+        assets = []
+        if dto.file_id:
+            asset = await asset_repo.find_one(
+                query={"project_id": project.id, "asset_name": file_id},
+                projection=AssetNameAndId,
+            )
+            if not asset:
+                raise HTTPException(
+                    detail={
+                        "signal": ResponseSignalEnum.FILE_NOT_FOUND.value,
+                        "message": ResponseEnum.FILE_NOT_FOUND.value,
+                    },
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+            assets.append(asset)
+        else:
+            query = {"project_id": project.id}
+            assets = await asset_repo.find(
+                query=query,
+                projection=AssetNameAndId,
+            )
+
+        docs_inserted = 0
+
+        for asset in assets:
+            file_content = process_controller.get_file_content(file_id=asset.asset_name)
+            file_chunks = process_controller.process_file_content(
+                file_content=file_content,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+            )
+            if file_chunks is None or len(file_chunks) == 0:
+                raise HTTPException(
+                    detail={
+                        "signal": ResponseSignalEnum.FILE_PROCESSING_FAILED.value,
+                        "message": ResponseEnum.FILE_PROCESSING_FAILED.value,
+                    },
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            chunks_list = [
+                dict(
+                    Chunk(
+                        chunk_text=chunk.page_content,
+                        chunk_metadata=chunk.metadata,
+                        chunk_order=i + 1,
+                        chunk_project_id=project.id,
+                        chunk_asset_id=asset.id,
+                    )
+                )
+                for i, chunk in enumerate(file_chunks)
+            ]
+            docs_inserted += await chunk_repo.insert_bulk(data=chunks_list)
+
         return JSONResponse(
             content={
                 "signal": ResponseSignalEnum.FILE_PROCESSING_SUCCESS.value,
@@ -159,8 +186,8 @@ async def process_file(project_id: str, dto: ProcessRequest):
 
     except HTTPException:
         raise
-    except Exception as e:
-        logging.error(f"Error while uplaoding file: {e}")
+    except Exception:
+        logging.exception("Error while uplaoding file")
         return JSONResponse(
             content={
                 "signal": ResponseSignalEnum.FILE_PROCESSING_FAILED.value,
